@@ -6,10 +6,12 @@ import { StyleSheet,
          TextInput, 
          Dimensions,
          Platform, 
-         ScrollView } from 'react-native'
+         ScrollView, 
+         AsyncStorage } from 'react-native'
 import { AppLoading } from 'expo'        
 import ToDo from './ToDo'
-import { v4 as uuidv4 } from 'uuid'    
+import 'react-native-get-random-values'
+import { v4 as uuidv4 } from 'uuid'
 
 const { height, width } = Dimensions.get("window")
 
@@ -24,7 +26,7 @@ export default class App extends React.Component {
   }
   render() {
     const {newToDo, loadedToDos, toDos} = this.state;
-    console.log(toDos)
+    //console.log(toDos)
     if(loadedToDos){
         return <AppLoading />
     }
@@ -42,6 +44,7 @@ export default class App extends React.Component {
               returnKeyType={'done'}
               autoCorrect={false}
               onSubmitEditing={this._addToDo} //완료를 클릭할 때 
+              underlineColorAndroid={"transparent"}
               />
             <ScrollView contentContainerStyle={styles.toDos}>
               {/* <ToDo text={'Ciao Imma ToDo'}/> */}
@@ -52,6 +55,7 @@ export default class App extends React.Component {
                       deleteToDo={this._deleteToDo}
                       completeToDo={this._completeToDo} 
                       uncompleteToDo={this._uncompleteToDo} 
+                      updateToDo={this._updateToDo}
                       {...toDo}
                       />)}
             </ScrollView>  
@@ -63,18 +67,19 @@ _controlNewTodo = text => {
     newToDo: text
   })
   }
-_loadToDos = () => {
+_loadToDos = async () => {
   //로딩이 끝나면 loadToDos를 true로 세팅
-  this.setState({
-    loadedToDos: true
-  })
+  try {
+    const toDos = await AsyncStorage.getItem("toDos");
+    const parsedToDos = JSON.parse(toDos);
+    this.setState({ loadedToDos: false, toDos: parsedToDos || {} });
+  } catch (err) {
+    console.log(err);
+  }
   } 
 _addToDo = () => {
   const {newToDo} = this.state
   if(newToDo !== ''){
-/*     this.setState({
-      newToDo:'' //텅빈 상태가 되게 하는 것 
-    }) */
     //prev state를 가져와서 새로운 todo를 추가
     this.setState(prevState => {
       const ID = uuidv4()
@@ -87,41 +92,44 @@ _addToDo = () => {
         }
       }
       const newState = {
-        ...prevState,
-        newToDo: '',
+        ...prevState, //whatevert we had before
+        newToDo: '', //입력을하고나면 New To Do영역이 빈다
         toDos: {
           ...prevState.toDos,
           ...newToDoObject
         }
       }
-      return {...newState}
+      this._saveToDos(newState.toDos)
+      return {...newState} //화면에 뿌린다
     })
   }
   }
-_deleteToDo = (id) => {
+_deleteToDo = (id) => { //삭제하려면 ID가 필요하다
     this.setState(prevState => {
-      const toDos = prevState.toDos;
-      delete toDos[id];
+      const toDos = prevState.toDos; //모든 toDos를 가져온다
+      delete toDos[id]; //삭제한다
       const newState = {
         ...prevState,
-        ...toDos
+        ...toDos //삭제한 toDos를 가져온다
       }
+      this._saveToDos(newState.toDos)
       return {...newState}
   })
 }  
 _uncompleteToDo = (id) => {
     this.setState(prevState => {
       const newState={
-        ...prevState,
+        ...prevState, //give me you had before
         toDos: {
           ...prevState.toDos,
-          [id]: {
-            ...prevState.toDos[id],
-            isCompleted: false
+          [id]: { //if there is an ID
+            ...prevState.toDos[id], //overwite it
+            isCompleted: false //uncomletetodo 
           }
         }
       }
-      return {...newState}
+      this._saveToDos(newState.toDos)
+      return {...newState} //show on the screen
     })
 }
 _completeToDo = (id) => {
@@ -136,9 +144,32 @@ _completeToDo = (id) => {
         }
       }
     }
+    this._saveToDos(newState.toDos)
     return {...newState}
   })
 }
+_updateToDo = (id, text) => {
+  this.setState(prevState => {
+    const newState={
+      ...prevState, //new to do, loading to do, todos
+      toDos: {
+        ...prevState.toDos,
+        [id]: {
+          ...prevState.toDos[id],
+          text: text
+        }
+      }
+    }
+    this._saveToDos(newState.toDos)
+    return {...newState}
+    })
+  }
+_saveToDos = (newToDos) => {
+  //console.log(JSON.stringify(newToDos))
+  const saveToDos = AsyncStorage.setItem('toDos',JSON.stringify(newToDos)) //toDos - key, value - newToDos
+  //AsyncStorage는 오브젝트 저장용이 아니다. String 저장용 -> 오브젝트를 string으로 변환해야함
+
+  }
 }
 
 const styles = StyleSheet.create({

@@ -13,13 +13,14 @@ class ToDo extends React.Component {
             toDoValue: props.text
         }
     }
-    static PropTypes = {
+    static propTypes = {
         text: PropTypes.string.isRequired,
         isCompleted: PropTypes.bool.isRequired,
         deleteToDo: PropTypes.func.isRequired,
         id: PropTypes.string.isRequired,
         completeToDo: PropTypes.func.isRequired,
-        uncompleteToDo: PropTypes.func.isRequired 
+        uncompleteToDo: PropTypes.func.isRequired,
+        updateToDo: PropTypes.func.isRequired 
     }
     
     render(){ 
@@ -41,9 +42,10 @@ class ToDo extends React.Component {
                                     isCompleted ? styles.completedText : styles.uncompletedText ]} 
                                     value={toDoValue}
                                     multiline={true}
-                                    onChangeText={this._controllInput}
+                                    onChangeText={this._controlInput}
                                     returnKeyType={"done"}
                                     onBlur={this._finishEditing} //바깥쪽을 탭하면 수정역역이 닫힘
+                                    underlineColorAndroid={"transparent"}
                                 />
                             ) : (
                             <Text style={[
@@ -66,7 +68,11 @@ class ToDo extends React.Component {
                                     <Text style={styles.actionText}>✏️</Text>
                                 </View>
                             </TouchableOpacity>
-                            <TouchableOpacity onPressOut={() => deleteToDo(id)}>
+                            <TouchableOpacity 
+                                onPressOut={(e) => {
+                                    e.stopPropagation
+                                    deleteToDo(id)
+                                    }}>
                                 <View style={styles.actionContainer}>
                                     <Text style={styles.actionText}>❌</Text>
                                 </View>
@@ -76,7 +82,8 @@ class ToDo extends React.Component {
                 </View>
         )
     }
-    _togglecomplete = () => {
+    _togglecomplete = (e) => {
+        e.stopPropagation
         const {isCompleted, completeToDo, uncompleteToDo, id} =this.props
         if(isCompleted){
             uncompleteToDo(id)
@@ -84,17 +91,22 @@ class ToDo extends React.Component {
             completeToDo(id)
         }           
     }
-    _startEditing = () => {
+    _startEditing = (e) => {
+        e.stopPropagation
         this.setState({
             isEditing: true
         })
     }
-    _finishEditing = () => {
+    _finishEditing = (e) => {
+        e.stopPropagation
+        const {toDoValue} = this.state //from TextInput
+        const { id, updateToDo } = this.props
+        updateToDo(id, toDoValue);
         this.setState({
             isEditing: false
         })
     }    
-    _controlInput = () => {
+    _controlInput = (text) => {
         this.setState({
             toDoValue: text
         })
