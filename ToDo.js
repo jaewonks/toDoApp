@@ -1,19 +1,30 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, TextInput } from 'react-native'
+import PropTypes from 'prop-types'
 
 const { height, width } = Dimensions.get("window") //폰 화면 크기를 알아오는 법
 
 //state사용을 위해 class방식으로 작업
 class ToDo extends React.Component { 
-    state = {
-        isEditing: false, //편집모드가 아닌 상태
-        isCompleted: false,
-        toDoValue: ""
+    constructor(props) {
+        super(props);
+        this.state = {
+            isEditing: false, //편집모드가 아닌 상태
+            toDoValue: props.text
+        }
+    }
+    static PropTypes = {
+        text: PropTypes.string.isRequired,
+        isCompleted: PropTypes.bool.isRequired,
+        deleteToDo: PropTypes.func.isRequired,
+        id: PropTypes.string.isRequired,
+        completeToDo: PropTypes.func.isRequired,
+        uncompleteToDo: PropTypes.func.isRequired 
     }
     
     render(){ 
-        const {isCompleted, isEditing, toDoValue} = this.state
-        const {text} = this.props
+        const {isEditing, toDoValue} = this.state
+        const {text, id, deleteToDo, isCompleted} = this.props
         return( 
             <View style={styles.container}>
                 <View style={styles.column}>
@@ -24,11 +35,17 @@ class ToDo extends React.Component {
                     </TouchableOpacity>
                         { isEditing ? (
                             <TextInput 
-                                style={[styles.input, styles.text, 
+                                style={[
+                                    styles.text, 
+                                    styles.input, 
                                     isCompleted ? styles.completedText : styles.uncompletedText ]} 
-                                value={toDoValue} 
-                                multiline={true}/>
-                        ) : (
+                                    value={toDoValue}
+                                    multiline={true}
+                                    onChangeText={this._controllInput}
+                                    returnKeyType={"done"}
+                                    onBlur={this._finishEditing} //바깥쪽을 탭하면 수정역역이 닫힘
+                                />
+                            ) : (
                             <Text style={[
                                 styles.text,
                                 isCompleted ? styles.completedText : styles.uncompletedText ]}>{text}</Text>
@@ -49,7 +66,7 @@ class ToDo extends React.Component {
                                     <Text style={styles.actionText}>✏️</Text>
                                 </View>
                             </TouchableOpacity>
-                            <TouchableOpacity>
+                            <TouchableOpacity onPressOut={() => deleteToDo(id)}>
                                 <View style={styles.actionContainer}>
                                     <Text style={styles.actionText}>❌</Text>
                                 </View>
@@ -60,24 +77,28 @@ class ToDo extends React.Component {
         )
     }
     _togglecomplete = () => {
-        this.setState(prevState => {
-            return {
-                isCompleted: !prevState.isCompleted
-            }
-        })
+        const {isCompleted, completeToDo, uncompleteToDo, id} =this.props
+        if(isCompleted){
+            uncompleteToDo(id)
+        } else {
+            completeToDo(id)
+        }           
     }
     _startEditing = () => {
-        const {text} = this.props
         this.setState({
-            isEditing: true,
-            toDoValue: text
+            isEditing: true
         })
     }
     _finishEditing = () => {
         this.setState({
             isEditing: false
         })
-    }
+    }    
+    _controlInput = () => {
+        this.setState({
+            toDoValue: text
+        })
+    }    
 }
 
 const styles = StyleSheet.create({
@@ -113,13 +134,13 @@ const styles = StyleSheet.create({
     text: {
         fontWeight: '600',
         fontSize: 20,
-        marginVertical: 20 //마진 상단과 하단을 뜻함
+        marginVertical: 20, //마진 상단과 하단을 뜻함
+        marginRight: 9
     },
     column: {
         flexDirection: 'row',
         alignItems: 'center',
         width: width /2,
-        justifyContent: 'space-between'
     },
     actions: {
         flexDirection: 'row'
@@ -132,6 +153,7 @@ const styles = StyleSheet.create({
     input: {
         marginVertical: 15,
         width: width /2,
+        paddingBottom: 5,
     }
 })
 
